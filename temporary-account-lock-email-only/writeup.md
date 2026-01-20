@@ -15,16 +15,31 @@ Change email feature, in example.com account settings page.
 
 No domain names, endpoints, or identifiers are included in here. I will refer to the target application as "example.com"
 
-## Discovery Process:
+## Discovery Process
 
-I had just finished doing my manual recon for the entire application(hours and hours of clicking around example.com and note taking). Instead of testing for one type of vulnerability at a time; I test one feature at a time. 
-So, I decided to start at account settings; oftentimes(in my experience) there can be lots of business logic bugs to be found here. I start by turning on Burp Intercept and normally capturing traffic. First, I changed my name 
-from Attacker Attacker to John Attcker. I go to Burp http history and observe the response. It's just a basic GraphQL update account stuff. But then I go over to the change email button. This is where I notice something interesting; In the UI it has 
-user current email (can't be changed), new email(enter new email), password(enter password to change email). After changing the email I go to http history and observe the request; here I notice you can change the current email! 
-So, I sent request again with random email, failed. Try again with email for another account, failed. Try again with email for another account AND PASSWORD for that other account, Success! However, don't get to excited because it changed the email 
-for my current account. So, I started thinking, I could bypass rate-limiting through this endpoint to enumerate victim passwords. So, I used that second account again(this time treated as victim), I tried brute-forcing the password field by using Burp Intruder. 
-But even after the right password was entered after request 25, Response was still 400. At this point I did not understand why it was not working and was about to give up; when I decided to login to that other account. That's when I noticed UI said: "account is locked" 
-So, while trying to brute-force Victim password I actually locked Victim out! Only lasted about 15 minutes though. 
+After completing full manual reconnaissance of the application (hours of navigating the UI and observing behavior), I tested the application **feature-by-feature** rather than vulnerability-by-vulnerability. In my experience, account settings often contain business logic issues, so I started there.
+
+With Burp Intercept enabled, I captured normal account update traffic. Initial actions (such as updating profile details) resulted in expected GraphQL account update requests.
+
+When reviewing the **change email** flow, the UI required:
+- Current email (read-only)
+- New email
+- Account password
+
+However, inspection of the corresponding request revealed that the **current email value was still modifiable** at the request level.
+
+I replayed the request with:
+- A random email → failed  
+- Another account’s email → failed  
+- Another account’s email **and password** → request accepted
+
+Although the change only affected my own account (not the victim’s), this behavior suggested that the endpoint was validating passwords **without authenticating the associated account context**.
+
+This raised concern about rate-limiting and lockout behavior. To test this, I treated the second account as a victim and attempted password guessing against the email-change endpoint using Burp Intruder.
+
+Even when the correct password was supplied, responses continued to return errors. At that point, I logged into the second account and observed that it had entered a **temporary locked state**.
+
+This confirmed that repeated unauthenticated interactions with the email-based flow could trigger an **account lockout**, requiring only knowledge of the victim’s email address. The lockout automatically resolved after approximately 15 minutes.
 
 ## Impact:
 
