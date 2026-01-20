@@ -14,3 +14,7 @@ All targets, endpoints, and identifiers are intentionally removed.
 - Demonstrate security testing methodology
 - Show clear technical communication
 - Share lessons learned from real systems
+
+## Write-ups
+
+- [Temporary Account Lock via Email-Only Flow](./temporary-account-lock-email-only/)
